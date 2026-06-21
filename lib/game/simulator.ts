@@ -91,6 +91,10 @@ function coordsFor(team: "user" | "opponent" | "none", type: MatchEventType): Co
       return attackTop
         ? { x: 50, y: 20, target_x: 50, target_y: 6 }
         : { x: 50, y: 80, target_x: 50, target_y: 94 };
+    case "free_kick":
+      return attackTop
+        ? { x: rand(40, 60), y: 28, target_x: 50, target_y: 8 }
+        : { x: rand(40, 60), y: 72, target_x: 50, target_y: 92 };
     case "goal":
       return attackTop
         ? { x: rand(42, 58), y: 18, target_x: 50, target_y: 5 }
@@ -213,7 +217,38 @@ export function simulateMatch(input: SimulateMatchInput): SimulateMatchResult {
     });
   };
 
-  for (let i = 0; i < userScore; i++) makeGoal("user");
+  // Lances interativos do usuário (pênalti / falta perigosa a favor).
+  // O resultado (is_goal) é predeterminado aqui para manter o placar final
+  // coerente; a escolha do batedor no client dramatiza o lance e a narração.
+  let userGoalsRemaining = userScore;
+  const setPieceCount = randInt(0, 2);
+  for (let i = 0; i < setPieceCount; i++) {
+    const isPenalty = Math.random() < 0.5;
+    const type: MatchEventType = isPenalty ? "penalty" : "free_kick";
+    let isGoal = false;
+    if (userGoalsRemaining > 0 && Math.random() < 0.6) {
+      isGoal = true;
+      userGoalsRemaining -= 1;
+    }
+    const c = coordsFor("user", type);
+    middle.push({
+      minute: randInt(5, 86),
+      type,
+      team: "user",
+      description: isPenalty
+        ? "Pênalti para o seu time!"
+        : "Falta perigosa para o seu time!",
+      ...c,
+      is_goal: isGoal,
+      interactive: true,
+      requires_choice: true,
+      choice_type: isPenalty ? "penalty_taker" : "free_kick_taker",
+      resolved: false,
+    });
+  }
+
+  // Gols restantes do usuário (lances normais) + gols do adversário.
+  for (let i = 0; i < userGoalsRemaining; i++) makeGoal("user");
   for (let i = 0; i < oppScore; i++) makeGoal("opponent");
 
   // Eventos de preenchimento (não-gol).
@@ -228,7 +263,6 @@ export function simulateMatch(input: SimulateMatchInput): SimulateMatchResult {
     "save",
     "foul",
     "foul",
-    "penalty",
   ];
 
   for (let i = 0; i < fillerCount; i++) {

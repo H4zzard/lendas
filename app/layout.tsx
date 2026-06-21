@@ -19,9 +19,31 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://lendas-five.vercel.app";
+
+const description =
+  "Monte seu 11 histórico, dispute uma Copa e entre no ranking das lendas.";
+
 export const metadata: Metadata = {
-  title: "Lendas",
-  description: "Monte seu time histórico e dispute partidas rápidas.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Lendas",
+    template: "%s",
+  },
+  description,
+  openGraph: {
+    title: "Lendas",
+    description,
+    siteName: "Lendas",
+    type: "website",
+    url: siteUrl,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Lendas",
+    description,
+  },
 };
 
 export default function RootLayout({

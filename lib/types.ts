@@ -94,9 +94,12 @@ export type MatchEventType =
   | "save"
   | "foul"
   | "penalty"
+  | "free_kick"
   | "goal"
   | "halftime"
   | "fulltime";
+
+export type SetPieceOutcome = "goal" | "miss" | "save" | "post";
 
 export interface MatchEvent {
   id: string;
@@ -111,6 +114,14 @@ export interface MatchEvent {
   target_x: number;
   target_y: number;
   is_goal: boolean;
+  // Eventos interativos (pênalti / falta a favor do usuário)
+  interactive?: boolean;
+  requires_choice?: boolean;
+  choice_type?: "penalty_taker" | "free_kick_taker";
+  resolved?: boolean;
+  chosen_player_id?: string;
+  chosen_player_name?: string;
+  outcome?: SetPieceOutcome;
 }
 
 export interface MatchStats {
