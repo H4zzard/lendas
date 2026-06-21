@@ -28,9 +28,6 @@ export async function GET(request: Request) {
   }
 
   const loginUrl = new URL("/login", origin);
-  loginUrl.searchParams.set(
-    "error",
-    "Não foi possível concluir o login. Solicite um novo link mágico.",
-  );
+  loginUrl.searchParams.set("error", "callback_failed");
   return NextResponse.redirect(loginUrl);
 }

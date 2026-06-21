@@ -1,17 +1,69 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Status = "idle" | "loading" | "success" | "error";
 
+/**
+ * Traduz erros do Supabase para mensagens claras. Em desenvolvimento mostra a
+ * mensagem real para facilitar o debug; em produção usa textos amigáveis.
+ */
+function translateAuthError(error: { message?: string; status?: number }): string {
+  const raw = error.message ?? "";
+  const lower = raw.toLowerCase();
+
+  if (
+    error.status === 429 ||
+    lower.includes("rate limit") ||
+    lower.includes("too many requests")
+  ) {
+    return "Aguarde alguns minutos antes de pedir outro link.";
+  }
+  if (lower.includes("invalid") && lower.includes("email")) {
+    return "Digite um e-mail válido.";
+  }
+  if (lower.includes("redirect")) {
+    return "Erro de redirecionamento. Tente novamente.";
+  }
+
+  if (process.env.NODE_ENV === "development" && raw) {
+    return raw;
+  }
+  return "Não foi possível enviar o link mágico agora.";
+}
+
+/** Mensagem para erros vindos do callback via ?error=. */
+function messageFromQuery(error: string | null): string {
+  if (!error) return "";
+  if (error === "callback_failed") {
+    return "Erro ao concluir o login. Solicite um novo link mágico e abra-o neste navegador.";
+  }
+  return error;
+}
+
 function LoginForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>("idle");
-  const [message, setMessage] = useState(searchParams.get("error") ?? "");
+  const [message, setMessage] = useState(() =>
+    messageFromQuery(searchParams.get("error")),
+  );
+  const [checking, setChecking] = useState(false);
+  const [checkNote, setCheckNote] = useState("");
+
+  // Se já estiver logado, vai direto para o jogo.
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        router.replace("/play/world-cup");
+      }
+    });
+  }, [router]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -19,6 +71,7 @@ function LoginForm() {
 
     setStatus("loading");
     setMessage("");
+    setCheckNote("");
 
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
@@ -30,14 +83,29 @@ function LoginForm() {
 
     if (error) {
       setStatus("error");
-      setMessage(
-        "Não foi possível enviar o link mágico. Verifique o e-mail e tente novamente.",
-      );
+      setMessage(translateAuthError(error));
       return;
     }
 
     setStatus("success");
-    setMessage("Enviamos um link mágico para seu e-mail.");
+    setMessage(
+      "Enviamos o link mágico. Abra o e-mail neste mesmo navegador ou copie o link e cole aqui.",
+    );
+  }
+
+  async function handleVerify() {
+    setChecking(true);
+    setCheckNote("");
+    const supabase = createClient();
+    const { data } = await supabase.auth.getUser();
+    if (data.user) {
+      router.replace("/profile");
+      return;
+    }
+    setChecking(false);
+    setCheckNote(
+      "Ainda não encontramos sua sessão. Confira se abriu o link no mesmo navegador.",
+    );
   }
 
   return (
@@ -64,7 +132,12 @@ function LoginForm() {
           </p>
         </header>
 
-        <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
+        {/* Orientação importante sobre o mesmo navegador */}
+        <p className="mt-5 rounded-xl border border-gold/40 bg-gold/10 px-4 py-3 font-sans text-sm text-charcoal">
+          Abra o link mágico no mesmo navegador em que você pediu o acesso.
+        </p>
+
+        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
           <label className="flex flex-col gap-2">
             <span className="font-sans text-xs font-semibold uppercase tracking-[0.18em] text-charcoal/70">
               E-mail
@@ -103,10 +176,27 @@ function LoginForm() {
         )}
 
         {status === "success" && (
-          <p className="mt-4 font-sans text-xs text-muted-foreground">
-            Não recebeu? Verifique a caixa de spam ou aguarde alguns instantes
-            antes de solicitar novamente.
-          </p>
+          <div className="mt-4 flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={handleVerify}
+              disabled={checking}
+              className="flex h-12 w-full items-center justify-center rounded-xl border-2 border-charcoal/80 bg-transparent font-heading text-lg tracking-wide text-charcoal transition-colors hover:bg-charcoal hover:text-paper disabled:opacity-70"
+            >
+              {checking ? "Verificando…" : "Já cliquei no link, verificar login"}
+            </button>
+
+            {checkNote && (
+              <p className="rounded-xl border border-cta/40 bg-cta/10 px-4 py-3 font-sans text-sm text-cta">
+                {checkNote}
+              </p>
+            )}
+
+            <p className="font-sans text-xs text-muted-foreground">
+              Não recebeu? Verifique a caixa de spam ou aguarde alguns instantes
+              antes de solicitar novamente.
+            </p>
+          </div>
         )}
       </main>
     </div>
