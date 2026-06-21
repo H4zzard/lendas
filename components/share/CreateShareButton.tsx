@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics/track-event";
 
 interface CreateShareButtonProps {
   campaignId: string;
@@ -41,6 +42,7 @@ export function CreateShareButton({
         return;
       }
       setShareId(data.public_share_id);
+      trackEvent("share_created", { campaign_id: campaignId });
       toast.success("Link público gerado!");
     } catch {
       toast.error("Falha de conexão.");

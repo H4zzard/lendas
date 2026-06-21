@@ -5,6 +5,7 @@ import { toPng } from "html-to-image";
 import { toast } from "sonner";
 import type { CampaignShareData } from "@/lib/types";
 import { ShareCard } from "@/components/share/ShareCard";
+import { trackEvent } from "@/lib/analytics/track-event";
 
 interface ShareActionsProps {
   data: CampaignShareData;
@@ -33,6 +34,7 @@ export function ShareActions({ data, shareId }: ShareActionsProps) {
       link.download = "lendas-campanha.png";
       link.href = dataUrl;
       link.click();
+      trackEvent("card_downloaded", { share_id: shareId });
     } catch {
       toast.error("Não foi possível gerar a imagem. Use o link para compartilhar.");
     } finally {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { loadShareCampaign } from "@/lib/share/load-share-campaign";
 import { ShareActions } from "@/components/share/ShareActions";
+import { TrackEvent } from "@/components/analytics/TrackEvent";
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -93,6 +94,7 @@ export default async function SharePage({
 
   return (
     <Shell>
+      <TrackEvent event="share_page_viewed" data={{ shareId }} />
       <header className="mb-6 text-center">
         <span className="font-sans text-[0.65rem] font-bold uppercase tracking-[0.3em] text-field-dark">
           Campanha compartilhada

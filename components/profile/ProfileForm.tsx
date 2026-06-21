@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { trackEvent } from "@/lib/analytics/track-event";
 
 type Status = "idle" | "saving" | "success" | "error";
 
@@ -59,6 +60,7 @@ export function ProfileForm({
     setUsername(cleanUsername);
     setStatus("success");
     setMessage("Perfil atualizado!");
+    trackEvent("profile_updated", {});
     router.refresh();
   }
 

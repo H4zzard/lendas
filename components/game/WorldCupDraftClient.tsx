@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics/track-event";
 import type { Player } from "@/lib/types";
 import { FORMATIONS, getFormation } from "@/lib/game/formations";
 import {
@@ -74,6 +75,21 @@ export function WorldCupDraftClient({
     ? hasFreeCompatibleSlot(selectedPlayer, slots)
     : false;
 
+  // Métricas: início do draft (uma vez) e time completo.
+  const squadCompletedTracked = useRef(false);
+  useEffect(() => {
+    trackEvent("draft_started", { tournament_id: tournamentId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (count >= TOTAL_SLOTS && !squadCompletedTracked.current) {
+      squadCompletedTracked.current = true;
+      trackEvent("squad_completed", { formation: formationId, averageOverall });
+    } else if (count < TOTAL_SLOTS) {
+      squadCompletedTracked.current = false;
+    }
+  }, [count, formationId, averageOverall]);
+
   function handleFormationChange(id: string) {
     if (id === formationId) return;
     if (count > 0) {
@@ -103,6 +119,10 @@ export function WorldCupDraftClient({
     if (isComplete) return;
     if (!hasFreeCompatibleSlot(player, slots)) return;
     setSelectedPlayer(player);
+    trackEvent("player_selected", {
+      player_id: player.id,
+      position: player.position,
+    });
   }
 
   function handleSlotClick(index: number) {
@@ -167,6 +187,12 @@ export function WorldCupDraftClient({
         setStarting(false);
         return;
       }
+      trackEvent("campaign_started", {
+        campaign_run_id: data.campaign_run_id,
+        formation: formationId,
+        average_overall: averageOverall,
+      });
+      trackEvent("match_started", { match_id: data.match_id, stage: "grupos" });
       router.push(data.redirect_url);
     } catch {
       toast.error("Falha de conexão ao iniciar a partida.");

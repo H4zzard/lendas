@@ -10,6 +10,7 @@ import {
 } from "@/lib/game/campaign";
 import { NextMatchButton } from "@/components/game/NextMatchButton";
 import { CreateShareButton } from "@/components/share/CreateShareButton";
+import { TrackEvent } from "@/components/analytics/TrackEvent";
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -124,6 +125,12 @@ export default async function CampaignPage({
 
   return (
     <Shell>
+      {isTerminal && (
+        <TrackEvent
+          event="campaign_finished"
+          data={{ status: campaign.status, campaign_id: campaign.id }}
+        />
+      )}
       <header className="flex flex-col items-center text-center">
         <span className="font-heading text-3xl leading-none tracking-tight text-charcoal">
           LEN<span className="text-field">DAS</span>

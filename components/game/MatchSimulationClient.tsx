@@ -14,6 +14,7 @@ import { FORMATIONS, getFormation } from "@/lib/game/formations";
 import { buildSlots } from "@/lib/game/draft";
 import { getFieldLayout, FIELD_LAYOUTS } from "@/lib/game/field-layout";
 import { SetPieceChoice } from "@/components/game/SetPieceChoice";
+import { trackEvent } from "@/lib/analytics/track-event";
 
 const CODE_DISPLAY: Record<string, string> = { DEU: "GER" };
 const displayCode = (code: string) => CODE_DISPLAY[code] ?? code;
@@ -101,6 +102,18 @@ export function MatchSimulationClient({
   );
 
   const oppLayout = FIELD_LAYOUTS["4-3-3"];
+
+  // Métrica: partida concluída (uma vez).
+  useEffect(() => {
+    if (!finished) return;
+    trackEvent("match_finished", {
+      match_id: match.id,
+      user_score: match.user_score,
+      opponent_score: match.opponent_score,
+      user_won: match.user_won,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finished]);
 
   const current = events[idx];
 

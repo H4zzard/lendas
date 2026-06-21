@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { trackEvent } from "@/lib/analytics/track-event";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -88,6 +89,7 @@ function LoginForm() {
     }
 
     setStatus("success");
+    trackEvent("login_link_sent", {});
     setMessage(
       "Enviamos o link mágico. Abra o e-mail neste mesmo navegador ou copie o link e cole aqui.",
     );

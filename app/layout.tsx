@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bebas_Neue, Inter, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { FeedbackButton } from "@/components/feedback/FeedbackButton";
 import "./globals.css";
 
 const bebas = Bebas_Neue({
@@ -58,6 +59,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         {children}
+        <FeedbackButton />
         <Toaster />
       </body>
     </html>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { PublicProfile, RankingEntry, Tournament } from "@/lib/types";
+import { TrackEvent } from "@/components/analytics/TrackEvent";
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -73,6 +74,7 @@ export default async function RankingPage() {
 
   return (
     <Shell>
+      <TrackEvent event="ranking_viewed" />
       <Link
         href="/"
         className="font-sans text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-charcoal"
