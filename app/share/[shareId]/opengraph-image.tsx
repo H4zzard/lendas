@@ -107,7 +107,7 @@ export default async function OpengraphImage({
         {/* Jogador + resultado */}
         <div style={{ display: "flex", flexDirection: "column", marginTop: 28 }}>
           <div style={{ display: "flex", fontSize: 30, color: GOLD, letterSpacing: 4 }}>
-            COPA DO MUNDO
+            {d.tournamentName.toUpperCase()}
           </div>
           <div
             style={{

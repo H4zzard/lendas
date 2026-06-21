@@ -12,9 +12,9 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 const MODES = [
-  { label: "Copa do Mundo", available: true },
-  { label: "Brasileirão", available: false },
-  { label: "Europa", available: false },
+  { label: "Copa do Mundo", slug: "world-cup", available: true },
+  { label: "Clubes do Brasil", slug: "brazil-clubs", available: true },
+  { label: "Europa", slug: "europe", available: false },
 ];
 
 function nameOf(profile: PublicProfile | undefined): string {
@@ -25,13 +25,19 @@ function nameOf(profile: PublicProfile | undefined): string {
   );
 }
 
-export default async function RankingPage() {
+export default async function RankingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tournament?: string }>;
+}) {
+  const { tournament: tournamentParam } = await searchParams;
+  const slug = tournamentParam ?? "world-cup";
   const supabase = await createClient();
 
   const { data: tournament } = await supabase
     .from("tournaments")
     .select("*")
-    .eq("slug", "world-cup")
+    .eq("slug", slug)
     .maybeSingle<Tournament>();
 
   let entries: RankingEntry[] = [];
@@ -87,32 +93,46 @@ export default async function RankingPage() {
           Ranking
         </h1>
         <p className="mt-2 font-sans text-sm text-muted-foreground">
-          As maiores lendas por campeonato.
+          {tournament?.name ?? "Campeonato"} · as maiores lendas.
         </p>
       </header>
 
-      {/* Filtro de campeonatos (Copa ativa; demais em breve) */}
+      {/* Filtro de campeonatos */}
       <div className="mt-6 flex gap-2 overflow-x-auto pb-1">
-        {MODES.map((mode) => (
-          <span
-            key={mode.label}
-            className={`shrink-0 rounded-full border px-4 py-1.5 font-sans text-xs font-semibold uppercase tracking-wider ${
-              mode.available
-                ? "border-field bg-field text-paper"
-                : "border-charcoal/15 bg-paper text-muted-foreground"
-            }`}
-          >
-            {mode.label}
-            {!mode.available && " · em breve"}
-          </span>
-        ))}
+        {MODES.map((mode) => {
+          const active = mode.slug === slug;
+          if (!mode.available) {
+            return (
+              <span
+                key={mode.slug}
+                className="shrink-0 rounded-full border border-charcoal/15 bg-paper px-4 py-1.5 font-sans text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+              >
+                {mode.label} · em breve
+              </span>
+            );
+          }
+          return (
+            <Link
+              key={mode.slug}
+              href={`/ranking?tournament=${mode.slug}`}
+              className={`shrink-0 rounded-full border px-4 py-1.5 font-sans text-xs font-semibold uppercase tracking-wider transition-colors ${
+                active
+                  ? "border-field bg-field text-paper"
+                  : "border-charcoal/15 bg-paper text-charcoal hover:border-field/50"
+              }`}
+            >
+              {mode.label}
+            </Link>
+          );
+        })}
       </div>
 
       {entries.length === 0 ? (
         <div className="mt-10 flex flex-col items-center rounded-2xl border border-dashed border-charcoal/20 bg-paper px-6 py-14 text-center">
           <span className="font-heading text-4xl text-gold">🏆</span>
           <p className="mt-3 max-w-xs font-sans text-sm text-muted-foreground">
-            Ainda não há lendas no ranking. Monte seu 11 e comece uma campanha.
+            Ainda não há lendas em {tournament?.name ?? "este campeonato"}. Monte
+            seu 11 e comece uma campanha.
           </p>
         </div>
       ) : (
@@ -184,7 +204,7 @@ export default async function RankingPage() {
       {/* Ações */}
       <section className="mt-10 flex flex-col gap-3">
         <Link
-          href="/play/world-cup"
+          href={`/play/${slug}`}
           className="flex h-14 w-full items-center justify-center rounded-xl bg-cta font-heading text-2xl tracking-wide text-paper shadow-[0_10px_24px_-10px_rgba(239,59,36,0.8)] transition-transform active:scale-[0.98]"
         >
           Jogar agora

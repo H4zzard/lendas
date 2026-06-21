@@ -24,7 +24,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
               LEN<span className="text-gold">DAS</span>
             </span>
             <span className="mt-1 font-sans text-[0.6rem] font-bold uppercase tracking-[0.3em] text-paper/60">
-              Copa do Mundo
+              {data.tournamentName}
             </span>
           </div>
 

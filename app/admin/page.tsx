@@ -167,6 +167,17 @@ export default async function AdminPage() {
       .returns<RankingEntry[]>(),
   ]);
 
+  // Torneios (id → nome) para rotular campanhas e ranking
+  const { data: tournamentsData } = await supabase
+    .from("tournaments")
+    .select("id, name, slug")
+    .returns<{ id: string; name: string; slug: string }[]>();
+  const tournamentById = new Map(
+    (tournamentsData ?? []).map((t) => [t.id, t]),
+  );
+  const tournamentLabel = (id: string) =>
+    tournamentById.get(id)?.name ?? "—";
+
   // Nomes (sem e-mail) via public_profiles
   const userIds = new Set<string>();
   for (const f of feedbacks ?? []) if (f.user_id) userIds.add(f.user_id);
@@ -307,6 +318,9 @@ export default async function AdminPage() {
             >
               <span className="truncate">
                 <StatusTag status={c.status} /> · {stageLabel(c.current_stage)}
+                <span className="block text-[0.6rem] text-muted-foreground">
+                  {tournamentLabel(c.tournament_id)}
+                </span>
               </span>
               <span className="text-center">
                 {c.goals_for}-{c.goals_against}
@@ -319,12 +333,12 @@ export default async function AdminPage() {
         </div>
       </Section>
 
-      {/* Top 10 ranking */}
+      {/* Top 10 ranking (geral) */}
       <Section title="Top 10 ranking">
         <div className="overflow-hidden rounded-xl border border-charcoal/10 bg-paper">
           <div className="grid grid-cols-[1.4rem_1fr_2rem_2rem_2.5rem] gap-2 border-b border-charcoal/10 px-3 py-2 font-sans text-[0.55rem] font-bold uppercase tracking-wide text-muted-foreground">
             <span>#</span>
-            <span>Jogador</span>
+            <span>Jogador · Campeonato</span>
             <span className="text-center">V</span>
             <span className="text-center">Tít</span>
             <span className="text-center">OVR</span>
@@ -335,7 +349,12 @@ export default async function AdminPage() {
               className="grid grid-cols-[1.4rem_1fr_2rem_2rem_2.5rem] items-center gap-2 border-b border-charcoal/5 px-3 py-2 font-sans text-sm text-charcoal"
             >
               <span className="text-muted-foreground">{i + 1}</span>
-              <span className="truncate font-semibold">{nameOf(r.user_id)}</span>
+              <span className="min-w-0 truncate font-semibold">
+                {nameOf(r.user_id)}
+                <span className="block text-[0.6rem] font-normal text-muted-foreground">
+                  {tournamentLabel(r.tournament_id)}
+                </span>
+              </span>
               <span className="text-center font-heading text-base">{r.wins}</span>
               <span className="text-center">{r.championships}</span>
               <span className="text-center">{r.best_overall}</span>

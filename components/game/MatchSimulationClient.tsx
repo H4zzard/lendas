@@ -62,6 +62,7 @@ function resolveTaker(event: MatchEvent, player: Player): Resolution {
 
 interface MatchSimulationClientProps {
   match: Match;
+  tournamentName: string;
   formationId: string;
   userPlayers: UserSquadPlayerWithPlayer[];
   opponentName: string;
@@ -71,6 +72,7 @@ interface MatchSimulationClientProps {
 
 export function MatchSimulationClient({
   match,
+  tournamentName,
   formationId,
   userPlayers,
   opponentName,
@@ -224,7 +226,7 @@ export function MatchSimulationClient({
           LEN<span className="text-field">DAS</span>
         </span>
         <span className="mt-1 font-sans text-[0.65rem] font-bold uppercase tracking-[0.25em] text-field-dark">
-          Copa do Mundo
+          {tournamentName}
         </span>
       </header>
 

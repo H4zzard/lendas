@@ -139,6 +139,7 @@ export async function loadShareCampaign(
 
   const shareData: CampaignShareData = {
     playerName,
+    tournamentName: tournament?.name ?? "Campeonato",
     statusSeal: sealFor(resultLabel),
     resultLabel,
     wins: summary.wins,

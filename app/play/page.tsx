@@ -2,10 +2,21 @@ import Link from "next/link";
 import { ModeCard } from "@/components/home/ModeCard";
 
 const modes = [
-  { title: "Copa do Mundo", subtitle: "Lendas mundiais", available: true },
-  { title: "Brasileirão", subtitle: "Ídolos nacionais" },
-  { title: "Europa", subtitle: "Gigantes do velho continente" },
-  { title: "Amigos", subtitle: "Desafie quem você quiser" },
+  {
+    title: "Copa do Mundo",
+    subtitle: "Seleções históricas",
+    available: true,
+    href: "/play/world-cup",
+  },
+  {
+    title: "Clubes do Brasil",
+    subtitle: "Clubes lendários",
+    available: true,
+    href: "/play/brazil-clubs",
+    badge: "Novo",
+  },
+  { title: "Europa", subtitle: "Gigantes do velho continente", available: false },
+  { title: "Amigos", subtitle: "Desafie quem você quiser", available: false },
 ];
 
 export default function PlayPage() {
@@ -23,13 +34,19 @@ export default function PlayPage() {
           Escolha o modo
         </h1>
         <p className="mt-2 font-sans text-sm text-muted-foreground">
-          Comece pela Copa do Mundo. Os outros modos chegam em breve.
+          Copa do Mundo e Clubes do Brasil já estão disponíveis. Mais modos em
+          breve.
         </p>
 
         <div className="mt-8 grid grid-cols-2 gap-3">
           {modes.map((mode) =>
-            mode.available ? (
-              <Link key={mode.title} href="/play/world-cup">
+            mode.available && mode.href ? (
+              <Link key={mode.title} href={mode.href} className="relative">
+                {mode.badge && (
+                  <span className="absolute -right-1.5 -top-1.5 z-10 rounded-full bg-gold px-2 py-0.5 font-sans text-[0.55rem] font-bold uppercase tracking-wide text-charcoal shadow">
+                    {mode.badge}
+                  </span>
+                )}
                 <ModeCard
                   title={mode.title}
                   subtitle={mode.subtitle}

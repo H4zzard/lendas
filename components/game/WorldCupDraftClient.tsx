@@ -30,11 +30,13 @@ const TOTAL_SLOTS = 11;
 interface WorldCupDraftClientProps {
   squads: SquadWithPlayers[];
   tournamentId: string;
+  tournamentName?: string;
 }
 
 export function WorldCupDraftClient({
   squads,
   tournamentId,
+  tournamentName = "Copa do Mundo",
 }: WorldCupDraftClientProps) {
   const router = useRouter();
   const [starting, setStarting] = useState(false);
@@ -220,7 +222,7 @@ export function WorldCupDraftClient({
           LEN<span className="text-field">DAS</span>
         </span>
         <span className="mt-1 font-sans text-xs font-bold uppercase tracking-[0.25em] text-field-dark">
-          Copa do Mundo
+          {tournamentName}
         </span>
         <span className="mt-3 rounded-full bg-charcoal px-4 py-1 font-heading text-xl tracking-wide text-paper">
           {count}/11

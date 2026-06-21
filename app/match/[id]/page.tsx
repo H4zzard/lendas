@@ -4,6 +4,7 @@ import type {
   Match,
   Player,
   Squad,
+  Tournament,
   UserSquad,
   UserSquadPlayerWithPlayer,
 } from "@/lib/types";
@@ -82,10 +83,17 @@ export default async function MatchPage({
     .order("overall", { ascending: false })
     .returns<Player[]>();
 
+  const { data: tournament } = await supabase
+    .from("tournaments")
+    .select("name")
+    .eq("id", match.tournament_id)
+    .maybeSingle<Pick<Tournament, "name">>();
+
   return (
     <Shell>
       <MatchSimulationClient
         match={match}
+        tournamentName={tournament?.name ?? "Campeonato"}
         formationId={userSquad?.formation ?? "4-3-3"}
         userPlayers={squadPlayers ?? []}
         opponentName={opponentSquad?.display_name ?? "Adversário"}

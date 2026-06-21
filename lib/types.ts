@@ -194,6 +194,7 @@ export interface CampaignRun {
 
 export interface CampaignShareData {
   playerName: string;
+  tournamentName: string;
   statusSeal: string;
   resultLabel: string;
   wins: number;

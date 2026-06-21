@@ -10,6 +10,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const PROTECTED_PREFIXES = [
   "/profile",
   "/play/world-cup",
+  "/play/brazil-clubs",
   "/match",
   "/result",
   "/campaign",

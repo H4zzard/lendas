@@ -49,16 +49,17 @@ export async function generateMetadata({
 
   const { shareData, status } = share;
   const name = shareData.playerName;
+  const tournament = shareData.tournamentName;
 
   const title =
     status === "champion"
-      ? "Lendas — Campeão da Copa do Mundo"
+      ? `Lendas — Campeão de ${tournament}`
       : `Lendas — Campanha de ${name}`;
 
   const description =
     status === "champion"
-      ? `${name} montou um 11 histórico e foi campeão no Lendas.`
-      : `${name} montou seu 11 histórico e ${shareData.resultLabel.toLowerCase()} no Lendas.`;
+      ? `${name} montou um 11 histórico e foi campeão em ${tournament} no Lendas.`
+      : `${name} montou seu 11 histórico e ${shareData.resultLabel.toLowerCase()} em ${tournament} no Lendas.`;
 
   const ogImage = `/share/${shareId}/opengraph-image`;
 

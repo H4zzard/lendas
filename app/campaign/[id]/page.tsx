@@ -78,6 +78,13 @@ export default async function CampaignPage({
     .eq("id", campaign.user_squad_id)
     .maybeSingle<UserSquad>();
 
+  const { data: tournament } = await supabase
+    .from("tournaments")
+    .select("name")
+    .eq("id", campaign.tournament_id)
+    .maybeSingle<{ name: string }>();
+  const tournamentName = tournament?.name ?? "Campeonato";
+
   const groupMatches = matches.filter((m) => m.stage === "grupos");
   const knockoutMatches = matches.filter((m) => m.is_knockout);
   const last = matches[matches.length - 1];
@@ -138,7 +145,10 @@ export default async function CampaignPage({
         <h1 className="mt-2 font-heading text-5xl leading-none tracking-tight text-charcoal">
           A campanha
         </h1>
-        <span className="mt-1 font-sans text-[0.65rem] uppercase tracking-[0.25em] text-muted-foreground">
+        <span className="mt-1 font-sans text-xs font-bold uppercase tracking-[0.25em] text-field-dark">
+          {tournamentName}
+        </span>
+        <span className="mt-0.5 font-sans text-[0.6rem] uppercase tracking-[0.25em] text-muted-foreground">
           #{campaign.id.slice(0, 8)}
         </span>
         <span
