@@ -1,26 +1,131 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-bebas), var(--font-inter), sans-serif;
+
+  /* Identidade Lendas */
+  --color-cream: #f4ebd7;
+  --color-charcoal: #141414;
+  --color-field: #1f7a4d;
+  --color-field-dark: #0f3d2e;
+  --color-gold: #c9a227;
+  --color-cta: #ef3b24;
+  --color-paper: #fffdf5;
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* Base Lendas: papel envelhecido + tinta carvão */
+  --background: #f4ebd7;
+  --foreground: #141414;
+  --card: #fffdf5;
+  --card-foreground: #141414;
+  --popover: #fffdf5;
+  --popover-foreground: #141414;
+  --primary: #141414;
+  --primary-foreground: #fffdf5;
+  --secondary: #1f7a4d;
+  --secondary-foreground: #fffdf5;
+  --muted: #ece1c8;
+  --muted-foreground: #6b6250;
+  --accent: #c9a227;
+  --accent-foreground: #141414;
+  --destructive: #ef3b24;
+  --border: #d8cba8;
+  --input: #d8cba8;
+  --ring: #c9a227;
+  --chart-1: #1f7a4d;
+  --chart-2: #c9a227;
+  --chart-3: #ef3b24;
+  --chart-4: #0f3d2e;
+  --chart-5: #141414;
+  --radius: 0.625rem;
+  --sidebar: #fffdf5;
+  --sidebar-foreground: #141414;
+  --sidebar-primary: #141414;
+  --sidebar-primary-foreground: #fffdf5;
+  --sidebar-accent: #c9a227;
+  --sidebar-accent-foreground: #141414;
+  --sidebar-border: #d8cba8;
+  --sidebar-ring: #c9a227;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  ::selection {
+    background-color: var(--color-gold);
+    color: var(--color-charcoal);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  /* Container central estilo "app mobile" */
+  .shell {
+    width: 100%;
+    max-width: 430px;
+    margin-inline: auto;
+  }
+
+  /* Textura sutil de papel envelhecido */
+  .paper-grain {
+    background-image:
+      radial-gradient(
+        circle at 1px 1px,
+        rgba(20, 20, 20, 0.04) 1px,
+        transparent 0
+      );
+    background-size: 4px 4px;
+  }
 }
