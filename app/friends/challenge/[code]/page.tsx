@@ -2,15 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type {
-  FriendChallenge,
-  Player,
-  PublicProfile,
-  Tournament,
-  UserSquad,
-  UserSquadPlayerWithPlayer,
-} from "@/lib/types";
+import {
+  buildFriendCardData,
+  loadFriendChallengeByCode,
+  type TeamSummary,
+} from "@/lib/friends/load-friend-challenge";
 import { ChallengeShareButtons } from "@/components/friends/ChallengeShareButtons";
+import { FriendChallengeShareActions } from "@/components/friends/FriendChallengeShareActions";
 
 export const metadata: Metadata = {
   title: "Lendas — Desafio entre amigos",
@@ -41,32 +39,17 @@ function NotFound() {
   );
 }
 
-function nameOf(p: PublicProfile | null): string {
-  return p?.display_name?.trim() || p?.username?.trim() || "Jogador";
-}
-
-interface TeamSummary {
-  averageOverall: number;
-  top: Player[];
-}
-
 function TeamBlock({
   title,
   name,
   team,
-  highlight,
 }: {
   title: string;
   name: string;
   team: TeamSummary | null;
-  highlight?: boolean;
 }) {
   return (
-    <div
-      className={`rounded-xl border p-3 ${
-        highlight ? "border-gold/60 bg-gold/10" : "border-charcoal/10 bg-paper"
-      }`}
-    >
+    <div className="rounded-xl border border-charcoal/10 bg-paper p-3">
       <span className="font-sans text-[0.6rem] font-bold uppercase tracking-[0.2em] text-field-dark">
         {title}
       </span>
@@ -100,55 +83,10 @@ export default async function ChallengePage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: challenge } = await supabase
-    .from("friend_challenges")
-    .select("*")
-    .eq("code", code)
-    .maybeSingle<FriendChallenge>();
-  if (!challenge) return <NotFound />;
+  const loaded = await loadFriendChallengeByCode(supabase, code);
+  if (!loaded) return <NotFound />;
 
-  const { data: tournament } = await supabase
-    .from("tournaments")
-    .select("name")
-    .eq("id", challenge.tournament_id)
-    .maybeSingle<Pick<Tournament, "name">>();
-  const tournamentName = tournament?.name ?? "Campeonato";
-
-  // Perfis (sem e-mail)
-  const ids = [challenge.creator_id, challenge.opponent_id].filter(
-    (id): id is string => Boolean(id),
-  );
-  const { data: profiles } = await supabase
-    .from("public_profiles")
-    .select("id, username, display_name")
-    .in("id", ids)
-    .returns<PublicProfile[]>();
-  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
-  const creatorName = nameOf(profileById.get(challenge.creator_id) ?? null);
-  const opponentName = challenge.opponent_id
-    ? nameOf(profileById.get(challenge.opponent_id) ?? null)
-    : "Adversário";
-
-  async function loadTeam(squadId: string | null): Promise<TeamSummary | null> {
-    if (!squadId) return null;
-    const { data: squad } = await supabase
-      .from("user_squads")
-      .select("average_overall")
-      .eq("id", squadId)
-      .maybeSingle<Pick<UserSquad, "average_overall">>();
-    const { data: sp } = await supabase
-      .from("user_squad_players")
-      .select("*, player:players(*)")
-      .eq("user_squad_id", squadId)
-      .returns<UserSquadPlayerWithPlayer[]>();
-    const top = [...(sp ?? [])]
-      .filter((x) => x.player)
-      .sort((a, b) => b.player.overall - a.player.overall)
-      .slice(0, 3)
-      .map((x) => x.player);
-    return { averageOverall: squad?.average_overall ?? 0, top };
-  }
-
+  const { challenge, tournamentName, creatorName, creatorTeam } = loaded;
   const isCreator = user.id === challenge.creator_id;
 
   const header = (
@@ -185,59 +123,22 @@ export default async function ChallengePage({
 
   // ----------------------------------------------------------- concluído
   if (challenge.status === "completed") {
-    const creatorTeam = await loadTeam(challenge.creator_user_squad_id);
-    const opponentTeam = await loadTeam(challenge.opponent_user_squad_id);
-    const cs = challenge.creator_score ?? 0;
-    const os = challenge.opponent_score ?? 0;
-    const outcome =
-      challenge.winner_user_id === null
-        ? "Empate"
-        : challenge.winner_user_id === challenge.creator_id
-          ? `${creatorName} venceu`
-          : `${opponentName} venceu`;
-
+    const cardData = buildFriendCardData(loaded);
     return (
       <Shell>
         {header}
-
-        <div className="mt-8 flex flex-col items-center gap-2 rounded-2xl border border-charcoal/15 bg-field-dark px-6 py-8 text-paper">
-          <span className="font-heading text-3xl tracking-wide text-gold">
-            {outcome}
-          </span>
-          <div className="mt-2 flex items-center gap-4 font-heading text-6xl leading-none">
-            <span>{cs}</span>
-            <span className="text-gold">-</span>
-            <span>{os}</span>
-          </div>
-          <div className="mt-1 flex w-full justify-between px-2 font-sans text-[0.65rem] uppercase tracking-wider text-paper/70">
-            <span className="truncate">{creatorName}</span>
-            <span className="truncate">{opponentName}</span>
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-col gap-2">
-          <TeamBlock
-            title="Criador"
-            name={creatorName}
-            team={creatorTeam}
-            highlight={challenge.winner_user_id === challenge.creator_id}
-          />
-          <TeamBlock
-            title="Desafiante"
-            name={opponentName}
-            team={opponentTeam}
-            highlight={challenge.winner_user_id === challenge.opponent_id}
-          />
-        </div>
-
         <div className="mt-6">
-          <ChallengeShareButtons
-            path={`/friends/challenge/${code}`}
-            shareTitle="Lendas — Desafio entre amigos"
-            shareText={`${creatorName} ${cs} x ${os} ${opponentName} no Lendas!`}
+          <FriendChallengeShareActions
+            data={cardData}
+            resultPath={`/friends/result/${code}`}
           />
         </div>
-
+        <Link
+          href={`/friends/result/${code}`}
+          className="mt-3 flex h-12 w-full items-center justify-center rounded-xl border-2 border-field bg-field/10 font-heading text-lg tracking-wide text-field-dark transition-colors hover:bg-field hover:text-paper"
+        >
+          Abrir resultado público
+        </Link>
         <button
           type="button"
           disabled
@@ -255,9 +156,8 @@ export default async function ChallengePage({
     );
   }
 
-  // ----------------------------------------------------------- aguardando
+  // ----------------------------------------------------------- aguardando (criador)
   if (isCreator) {
-    const creatorTeam = await loadTeam(challenge.creator_user_squad_id);
     return (
       <Shell>
         {header}
@@ -268,7 +168,6 @@ export default async function ChallengePage({
           Compartilhe o link abaixo. Quando alguém aceitar e montar o time, o
           resultado aparece aqui.
         </p>
-
         <div className="mt-6">
           <ChallengeShareButtons
             path={`/friends/challenge/${code}`}
@@ -276,7 +175,6 @@ export default async function ChallengePage({
             shareText={`${creatorName} te desafiou no Lendas (${tournamentName})! Monte seu 11.`}
           />
         </div>
-
         <div className="mt-6">
           <TeamBlock title="Seu time" name={creatorName} team={creatorTeam} />
         </div>
@@ -284,7 +182,7 @@ export default async function ChallengePage({
     );
   }
 
-  // aguardando, visitante (potencial oponente)
+  // ----------------------------------------------------------- aguardando (visitante)
   return (
     <Shell>
       {header}
@@ -294,7 +192,6 @@ export default async function ChallengePage({
       <p className="mt-2 text-center font-sans text-sm text-muted-foreground">
         {creatorName} montou um 11 em {tournamentName}. Monte o seu para disputar.
       </p>
-
       <Link
         href={`/friends/challenge/${code}/join`}
         className="mt-8 flex h-14 w-full items-center justify-center rounded-xl bg-cta font-heading text-2xl tracking-wide text-paper shadow-[0_10px_24px_-10px_rgba(239,59,36,0.8)] transition-transform active:scale-[0.98]"

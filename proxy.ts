@@ -19,7 +19,17 @@ const PROTECTED_PREFIXES = [
   "/admin",
 ];
 
+// Rotas públicas que ficam "dentro" de um prefixo protegido (ex.: /friends).
+const PUBLIC_PREFIXES = ["/friends/result"];
+
 function isProtected(pathname: string): boolean {
+  if (
+    PUBLIC_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    )
+  ) {
+    return false;
+  }
   return PROTECTED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );

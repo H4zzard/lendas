@@ -140,7 +140,9 @@ export default async function AdminPage() {
         .eq("status", "completed"),
       supabase
         .from("friend_challenges")
-        .select("id, code, status, tournament_id, created_at, completed_at")
+        .select(
+          "id, code, status, tournament_id, creator_score, opponent_score, created_at, completed_at",
+        )
         .order("created_at", { ascending: false })
         .limit(20)
         .returns<
@@ -149,6 +151,8 @@ export default async function AdminPage() {
             code: string;
             status: string;
             tournament_id: string;
+            creator_score: number | null;
+            opponent_score: number | null;
             created_at: string;
             completed_at: string | null;
           }[]
@@ -384,12 +388,26 @@ export default async function AdminPage() {
               key={c.id}
               className="flex items-center gap-2 border-b border-charcoal/5 px-3 py-2 font-sans text-xs text-charcoal"
             >
-              <span className="font-mono text-[0.65rem] text-muted-foreground">
-                {c.code}
-              </span>
+              {c.status === "completed" ? (
+                <a
+                  href={`/friends/result/${c.code}`}
+                  className="font-mono text-[0.65rem] text-field-dark underline"
+                >
+                  {c.code}
+                </a>
+              ) : (
+                <span className="font-mono text-[0.65rem] text-muted-foreground">
+                  {c.code}
+                </span>
+              )}
               <span className="flex-1 truncate">
                 {tournamentLabel(c.tournament_id)}
               </span>
+              {c.status === "completed" && (
+                <span className="font-heading text-sm text-charcoal/70">
+                  {c.creator_score}-{c.opponent_score}
+                </span>
+              )}
               <StatusTag status={c.status} />
             </div>
           ))}

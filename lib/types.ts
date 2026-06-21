@@ -296,6 +296,28 @@ export interface FriendChallengeWithRelations extends FriendChallenge {
   opponentProfile: PublicProfile | null;
 }
 
+export interface FriendTeamSummary {
+  name: string;
+  averageOverall: number;
+  topPlayers: {
+    first_name: string;
+    position: string;
+    number: number;
+    overall: number;
+  }[];
+}
+
+export interface FriendChallengeCardData {
+  code: string;
+  tournamentName: string;
+  creator: FriendTeamSummary;
+  opponent: FriendTeamSummary;
+  creatorScore: number;
+  opponentScore: number;
+  winner: "creator" | "opponent" | null;
+  resultLabel: string;
+}
+
 export type FeedbackType = "feedback" | "bug" | "idea";
 export type FeedbackStatus = "new" | "read" | "in_review" | "resolved" | "ignored";
 export type FeedbackPriority = "low" | "normal" | "high" | "urgent";

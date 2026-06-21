@@ -155,25 +155,20 @@ export async function POST(
     .select("id")
     .single();
 
-  // Completa o desafio
-  const { error: updateError } = await supabase
-    .from("friend_challenges")
-    .update({
-      opponent_id: user.id,
-      opponent_user_squad_id: saved.userSquadId,
-      match_id: match?.id ?? null,
-      creator_score: result.creator_score,
-      opponent_score: result.opponent_score,
-      winner_user_id: winnerUserId,
-      status: "completed",
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", challenge.id);
+  // Conclui o desafio via função segura (SECURITY DEFINER) — sem update direto.
+  const { error: rpcError } = await supabase.rpc("complete_friend_challenge", {
+    p_code: code,
+    p_opponent_user_squad_id: saved.userSquadId,
+    p_match_id: match?.id ?? null,
+    p_creator_score: result.creator_score,
+    p_opponent_score: result.opponent_score,
+    p_winner_user_id: winnerUserId,
+  });
 
-  if (updateError) {
+  if (rpcError) {
     return NextResponse.json(
       { error: "Não foi possível concluir o desafio." },
-      { status: 500 },
+      { status: 409 },
     );
   }
 
