@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import type { SimUserPlayer } from "@/lib/game/simulator";
-import type { Player, Squad, GroupResult } from "@/lib/types";
+import type { Squad, GroupResult } from "@/lib/types";
 import { generateMutualResult } from "@/lib/game/campaign";
+import { saveUserSquad } from "@/lib/game/save-user-squad";
 import {
   createAndSimulateMatch,
   loadSquadWithPlayers,
@@ -55,20 +55,6 @@ export async function POST(request: Request) {
   if (!tournament_id || !formation || !play_style || !Array.isArray(players)) {
     return NextResponse.json({ error: "Dados incompletos." }, { status: 400 });
   }
-  if (players.length !== 11) {
-    return NextResponse.json(
-      { error: "A escalação precisa ter exatamente 11 jogadores." },
-      { status: 400 },
-    );
-  }
-
-  const playerIds = players.map((p) => p.player_id);
-  if (new Set(playerIds).size !== 11) {
-    return NextResponse.json(
-      { error: "Há jogadores duplicados na escalação." },
-      { status: 400 },
-    );
-  }
 
   const { data: tournament } = await supabase
     .from("tournaments")
@@ -79,57 +65,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Torneio não encontrado." }, { status: 404 });
   }
 
-  const { data: realPlayers } = await supabase
-    .from("players")
-    .select("*")
-    .in("id", playerIds)
-    .returns<Player[]>();
-  if (!realPlayers || realPlayers.length !== 11) {
-    return NextResponse.json(
-      { error: "Alguns jogadores não foram encontrados." },
-      { status: 400 },
-    );
+  // 1+2. user_squad + user_squad_players (helper compartilhado)
+  const saved = await saveUserSquad(supabase, {
+    userId: user.id,
+    tournamentId: tournament_id,
+    formation,
+    playStyle: play_style,
+    averageOverall: average_overall,
+    players,
+  });
+  if ("error" in saved) {
+    return NextResponse.json({ error: saved.error }, { status: saved.status });
   }
-
-  const playerById = new Map(realPlayers.map((p) => [p.id, p]));
-  const userPlayers: SimUserPlayer[] = players.map((entry) => ({
-    player: playerById.get(entry.player_id)!,
-    slot_position: entry.slot_position,
-  }));
-
-  // 1. user_squad
-  const { data: userSquad, error: squadError } = await supabase
-    .from("user_squads")
-    .insert({
-      user_id: user.id,
-      tournament_id,
-      formation,
-      play_style,
-      average_overall: Math.round(average_overall),
-    })
-    .select("id")
-    .single();
-  if (squadError || !userSquad) {
-    return NextResponse.json(
-      { error: "Não foi possível salvar a escalação." },
-      { status: 500 },
-    );
-  }
-
-  // 2. user_squad_players
-  const { error: spError } = await supabase.from("user_squad_players").insert(
-    players.map((entry) => ({
-      user_squad_id: userSquad.id,
-      player_id: entry.player_id,
-      slot_position: entry.slot_position,
-    })),
-  );
-  if (spError) {
-    return NextResponse.json(
-      { error: "Não foi possível salvar os jogadores da escalação." },
-      { status: 500 },
-    );
-  }
+  const userSquad = { id: saved.userSquadId };
+  const userPlayers = saved.userPlayers;
 
   // 3. Sortear 3 adversários do grupo
   const { data: allSquads } = await supabase

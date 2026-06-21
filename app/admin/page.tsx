@@ -130,6 +130,31 @@ export default async function AdminPage() {
     { label: "Ideias", value: ideasRes.count ?? 0 },
   ];
 
+  // Desafios entre amigos
+  const [challengesRes, challengesDoneRes, { data: recentChallenges }] =
+    await Promise.all([
+      supabase.from("friend_challenges").select("id", head),
+      supabase
+        .from("friend_challenges")
+        .select("id", head)
+        .eq("status", "completed"),
+      supabase
+        .from("friend_challenges")
+        .select("id, code, status, tournament_id, created_at, completed_at")
+        .order("created_at", { ascending: false })
+        .limit(20)
+        .returns<
+          {
+            id: string;
+            code: string;
+            status: string;
+            tournament_id: string;
+            created_at: string;
+            completed_at: string | null;
+          }[]
+        >(),
+    ]);
+
   const [
     { data: feedbacks },
     { data: recentEvents },
@@ -330,6 +355,45 @@ export default async function AdminPage() {
             </div>
           ))}
           {(campaigns ?? []).length === 0 && <Empty />}
+        </div>
+      </Section>
+
+      {/* Desafios entre amigos */}
+      <Section title="Desafios entre amigos">
+        <div className="mb-3 grid grid-cols-2 gap-2">
+          <div className="flex flex-col items-center rounded-xl border border-charcoal/10 bg-paper py-3">
+            <span className="font-heading text-2xl leading-none text-charcoal">
+              {challengesRes.count ?? 0}
+            </span>
+            <span className="mt-1 font-sans text-[0.55rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+              Criados
+            </span>
+          </div>
+          <div className="flex flex-col items-center rounded-xl border border-charcoal/10 bg-paper py-3">
+            <span className="font-heading text-2xl leading-none text-charcoal">
+              {challengesDoneRes.count ?? 0}
+            </span>
+            <span className="mt-1 font-sans text-[0.55rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+              Concluídos
+            </span>
+          </div>
+        </div>
+        <div className="overflow-hidden rounded-xl border border-charcoal/10 bg-paper">
+          {(recentChallenges ?? []).map((c) => (
+            <div
+              key={c.id}
+              className="flex items-center gap-2 border-b border-charcoal/5 px-3 py-2 font-sans text-xs text-charcoal"
+            >
+              <span className="font-mono text-[0.65rem] text-muted-foreground">
+                {c.code}
+              </span>
+              <span className="flex-1 truncate">
+                {tournamentLabel(c.tournament_id)}
+              </span>
+              <StatusTag status={c.status} />
+            </div>
+          ))}
+          {(recentChallenges ?? []).length === 0 && <Empty />}
         </div>
       </Section>
 

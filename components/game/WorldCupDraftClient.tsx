@@ -31,12 +31,18 @@ interface WorldCupDraftClientProps {
   squads: SquadWithPlayers[];
   tournamentId: string;
   tournamentName?: string;
+  submitUrl?: string;
+  submitLabel?: string;
+  loadingLabel?: string;
 }
 
 export function WorldCupDraftClient({
   squads,
   tournamentId,
   tournamentName = "Copa do Mundo",
+  submitUrl = "/api/matches/start",
+  submitLabel = "Iniciar partida",
+  loadingLabel = "Apitando o início…",
 }: WorldCupDraftClientProps) {
   const router = useRouter();
   const [starting, setStarting] = useState(false);
@@ -178,26 +184,28 @@ export function WorldCupDraftClient({
     };
 
     try {
-      const res = await fetch("/api/matches/start", {
+      const res = await fetch(submitUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? "Erro ao iniciar partida.");
+        toast.error(data.error ?? "Não foi possível continuar.");
         setStarting(false);
         return;
       }
-      trackEvent("campaign_started", {
-        campaign_run_id: data.campaign_run_id,
-        formation: formationId,
-        average_overall: averageOverall,
-      });
-      trackEvent("match_started", { match_id: data.match_id, stage: "grupos" });
+      if (data.campaign_run_id) {
+        trackEvent("campaign_started", {
+          campaign_run_id: data.campaign_run_id,
+          formation: formationId,
+          average_overall: averageOverall,
+        });
+        trackEvent("match_started", { match_id: data.match_id, stage: "grupos" });
+      }
       router.push(data.redirect_url);
     } catch {
-      toast.error("Falha de conexão ao iniciar a partida.");
+      toast.error("Falha de conexão.");
       setStarting(false);
     }
   }
@@ -344,7 +352,7 @@ export function WorldCupDraftClient({
             disabled={starting}
             className="flex h-14 w-full items-center justify-center rounded-xl bg-field font-heading text-2xl tracking-wide text-paper shadow-[0_10px_24px_-10px_rgba(31,122,77,0.8)] transition-transform active:scale-[0.98] disabled:opacity-70"
           >
-            {starting ? "Apitando o início…" : "Iniciar partida"}
+            {starting ? loadingLabel : submitLabel}
           </button>
         </section>
       )}

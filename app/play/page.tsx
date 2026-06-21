@@ -21,7 +21,12 @@ const modes = [
     href: "/play/europe-legends",
     badge: "Novo",
   },
-  { title: "Amigos", subtitle: "Desafie quem você quiser", available: false },
+  {
+    title: "Modo Amigos",
+    subtitle: "Desafie por link",
+    available: true,
+    href: "/friends",
+  },
 ];
 
 export default function PlayPage() {

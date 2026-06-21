@@ -27,8 +27,20 @@ function Unavailable({ message }: { message: string }) {
   );
 }
 
-/** Página de montagem reutilizável por qualquer torneio. */
-export async function TournamentDraftPage({ slug }: { slug: string }) {
+interface TournamentDraftPageProps {
+  slug: string;
+  submitUrl?: string;
+  submitLabel?: string;
+  loadingLabel?: string;
+}
+
+/** Página de montagem reutilizável por qualquer torneio (campanha ou desafio). */
+export async function TournamentDraftPage({
+  slug,
+  submitUrl,
+  submitLabel,
+  loadingLabel,
+}: TournamentDraftPageProps) {
   const { tournament, squads } = await loadTournamentDraft(slug);
 
   if (!tournament) {
@@ -48,6 +60,9 @@ export async function TournamentDraftPage({ slug }: { slug: string }) {
         squads={squads}
         tournamentId={tournament.id}
         tournamentName={tournament.name}
+        submitUrl={submitUrl}
+        submitLabel={submitLabel}
+        loadingLabel={loadingLabel}
       />
     </Shell>
   );

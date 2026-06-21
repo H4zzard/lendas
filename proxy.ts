@@ -12,6 +12,7 @@ const PROTECTED_PREFIXES = [
   "/play/world-cup",
   "/play/brazil-clubs",
   "/play/europe-legends",
+  "/friends",
   "/match",
   "/result",
   "/campaign",

@@ -265,6 +265,37 @@ export interface PublicProfile {
   display_name: string | null;
 }
 
+export type FriendChallengeStatus =
+  | "waiting"
+  | "ready"
+  | "completed"
+  | "cancelled";
+
+export interface FriendChallenge {
+  id: string;
+  code: string;
+  tournament_id: string;
+  creator_id: string;
+  opponent_id: string | null;
+  creator_user_squad_id: string | null;
+  opponent_user_squad_id: string | null;
+  match_id: string | null;
+  status: FriendChallengeStatus;
+  winner_user_id: string | null;
+  creator_score: number | null;
+  opponent_score: number | null;
+  shared_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FriendChallengeWithRelations extends FriendChallenge {
+  tournament: Tournament | null;
+  creatorProfile: PublicProfile | null;
+  opponentProfile: PublicProfile | null;
+}
+
 export type FeedbackType = "feedback" | "bug" | "idea";
 export type FeedbackStatus = "new" | "read" | "in_review" | "resolved" | "ignored";
 export type FeedbackPriority = "low" | "normal" | "high" | "urgent";
