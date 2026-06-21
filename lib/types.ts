@@ -263,3 +263,22 @@ export interface PublicProfile {
   username: string | null;
   display_name: string | null;
 }
+
+export type FeedbackType = "feedback" | "bug" | "idea";
+export type FeedbackStatus = "new" | "read" | "in_review" | "resolved" | "ignored";
+export type FeedbackPriority = "low" | "normal" | "high" | "urgent";
+
+export interface FeedbackReport {
+  id: string;
+  user_id: string | null;
+  type: FeedbackType | string;
+  message: string;
+  page_url: string | null;
+  user_agent: string | null;
+  status: FeedbackStatus;
+  priority: FeedbackPriority;
+  admin_note: string | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  created_at: string;
+}

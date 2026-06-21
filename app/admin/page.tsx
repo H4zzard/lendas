@@ -3,8 +3,10 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin/is-admin";
 import { stageLabel } from "@/lib/game/campaign";
+import { FeedbackAdminPanel } from "@/components/admin/FeedbackAdminPanel";
 import type {
   CampaignRun,
+  FeedbackReport,
   PublicProfile,
   RankingEntry,
 } from "@/lib/types";
@@ -15,15 +17,6 @@ function Shell({ children }: { children: React.ReactNode }) {
       <main className="shell flex-1 px-5 pb-16 pt-10">{children}</main>
     </div>
   );
-}
-
-interface FeedbackRow {
-  id: string;
-  user_id: string | null;
-  type: string;
-  message: string;
-  page_url: string | null;
-  created_at: string;
 }
 
 interface GameEventRow {
@@ -109,6 +102,34 @@ export default async function AdminPage() {
   const sharesCount = sharesRes.count ?? 0;
   const events24hCount = events24hRes.count ?? 0;
 
+  // Resumo de feedbacks
+  const [newRes, openBugsRes, urgentRes, resolvedRes, ideasRes] =
+    await Promise.all([
+      supabase.from("feedback_reports").select("id", head).eq("status", "new"),
+      supabase
+        .from("feedback_reports")
+        .select("id", head)
+        .eq("type", "bug")
+        .not("status", "in", '("resolved","ignored")'),
+      supabase
+        .from("feedback_reports")
+        .select("id", head)
+        .eq("priority", "urgent"),
+      supabase
+        .from("feedback_reports")
+        .select("id", head)
+        .eq("status", "resolved"),
+      supabase.from("feedback_reports").select("id", head).eq("type", "idea"),
+    ]);
+
+  const feedbackSummary = [
+    { label: "Novos", value: newRes.count ?? 0 },
+    { label: "Bugs abertos", value: openBugsRes.count ?? 0 },
+    { label: "Urgentes", value: urgentRes.count ?? 0 },
+    { label: "Resolvidos", value: resolvedRes.count ?? 0 },
+    { label: "Ideias", value: ideasRes.count ?? 0 },
+  ];
+
   const [
     { data: feedbacks },
     { data: recentEvents },
@@ -120,8 +141,8 @@ export default async function AdminPage() {
       .from("feedback_reports")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(50)
-      .returns<FeedbackRow[]>(),
+      .limit(100)
+      .returns<FeedbackReport[]>(),
     supabase
       .from("game_events")
       .select("*")
@@ -164,6 +185,10 @@ export default async function AdminPage() {
     const p = profileById.get(id);
     return p?.display_name?.trim() || p?.username?.trim() || "Jogador";
   };
+  const nameById: Record<string, string> = {};
+  for (const [pid, p] of profileById) {
+    nameById[pid] = p.display_name?.trim() || p.username?.trim() || "Jogador";
+  }
 
   // Agrupamento de eventos por tipo
   const eventCounts = new Map<string, number>();
@@ -247,39 +272,23 @@ export default async function AdminPage() {
       </Section>
 
       {/* Feedbacks */}
-      <Section title="Feedbacks recentes">
-        <ul className="flex flex-col gap-2">
-          {(feedbacks ?? []).map((f) => (
-            <li
-              key={f.id}
-              className="rounded-xl border border-charcoal/10 bg-paper px-3 py-2.5"
+      <Section title="Feedbacks">
+        <div className="mb-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
+          {feedbackSummary.map((s) => (
+            <div
+              key={s.label}
+              className="flex flex-col items-center rounded-xl border border-charcoal/10 bg-paper py-3"
             >
-              <div className="flex items-center justify-between">
-                <span
-                  className={`rounded px-2 py-0.5 font-sans text-[0.6rem] font-bold uppercase tracking-wide ${
-                    f.type === "bug"
-                      ? "bg-cta/15 text-cta"
-                      : f.type === "idea"
-                        ? "bg-gold/20 text-charcoal"
-                        : "bg-field/15 text-field-dark"
-                  }`}
-                >
-                  {f.type}
-                </span>
-                <span className="font-sans text-[0.65rem] text-muted-foreground">
-                  {nameOf(f.user_id)} · {fmt(f.created_at)}
-                </span>
-              </div>
-              <p className="mt-1.5 font-sans text-sm text-charcoal">{f.message}</p>
-              {f.page_url && (
-                <p className="mt-1 font-sans text-[0.65rem] text-muted-foreground">
-                  {f.page_url}
-                </p>
-              )}
-            </li>
+              <span className="font-heading text-2xl leading-none text-charcoal">
+                {s.value}
+              </span>
+              <span className="mt-1 text-center font-sans text-[0.5rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                {s.label}
+              </span>
+            </div>
           ))}
-          {(feedbacks ?? []).length === 0 && <Empty />}
-        </ul>
+        </div>
+        <FeedbackAdminPanel feedbacks={feedbacks ?? []} nameById={nameById} />
       </Section>
 
       {/* Campanhas */}
