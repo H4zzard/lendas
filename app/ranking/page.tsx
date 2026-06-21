@@ -14,7 +14,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 const MODES = [
   { label: "Copa do Mundo", slug: "world-cup", available: true },
   { label: "Clubes do Brasil", slug: "brazil-clubs", available: true },
-  { label: "Europa", slug: "europe", available: false },
+  { label: "Europa Lendária", slug: "europe-legends", available: true },
 ];
 
 function nameOf(profile: PublicProfile | undefined): string {

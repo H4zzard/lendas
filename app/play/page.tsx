@@ -13,9 +13,14 @@ const modes = [
     subtitle: "Clubes lendários",
     available: true,
     href: "/play/brazil-clubs",
+  },
+  {
+    title: "Europa Lendária",
+    subtitle: "Clubes históricos",
+    available: true,
+    href: "/play/europe-legends",
     badge: "Novo",
   },
-  { title: "Europa", subtitle: "Gigantes do velho continente", available: false },
   { title: "Amigos", subtitle: "Desafie quem você quiser", available: false },
 ];
 
@@ -34,8 +39,8 @@ export default function PlayPage() {
           Escolha o modo
         </h1>
         <p className="mt-2 font-sans text-sm text-muted-foreground">
-          Copa do Mundo e Clubes do Brasil já estão disponíveis. Mais modos em
-          breve.
+          Copa do Mundo, Clubes do Brasil e Europa Lendária já estão
+          disponíveis. Mais modos em breve.
         </p>
 
         <div className="mt-8 grid grid-cols-2 gap-3">
