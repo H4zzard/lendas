@@ -13,6 +13,7 @@ const PROTECTED_PREFIXES = [
   "/match",
   "/result",
   "/campaign",
+  "/admin",
 ];
 
 function isProtected(pathname: string): boolean {

@@ -1,0 +1,400 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/admin/is-admin";
+import { stageLabel } from "@/lib/game/campaign";
+import type {
+  CampaignRun,
+  PublicProfile,
+  RankingEntry,
+} from "@/lib/types";
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="paper-grain flex flex-1 flex-col bg-background">
+      <main className="shell flex-1 px-5 pb-16 pt-10">{children}</main>
+    </div>
+  );
+}
+
+interface FeedbackRow {
+  id: string;
+  user_id: string | null;
+  type: string;
+  message: string;
+  page_url: string | null;
+  created_at: string;
+}
+
+interface GameEventRow {
+  id: string;
+  user_id: string | null;
+  event_name: string;
+  event_data: Record<string, unknown>;
+  page_url: string | null;
+  created_at: string;
+}
+
+function fmt(date: string): string {
+  return new Date(date).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export default async function AdminPage() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const admin = await isAdmin(supabase);
+  if (!admin) {
+    return (
+      <Shell>
+        <div className="flex flex-1 flex-col items-center justify-center py-20 text-center">
+          <span className="font-heading text-5xl leading-none tracking-tight text-charcoal">
+            LEN<span className="text-field">DAS</span>
+          </span>
+          <h1 className="mt-8 font-heading text-4xl tracking-wide text-charcoal">
+            Acesso restrito
+          </h1>
+          <p className="mt-2 max-w-xs font-sans text-sm text-muted-foreground">
+            Esta área é exclusiva para administradores.
+          </p>
+          <Link
+            href="/"
+            className="mt-8 flex h-12 w-full max-w-xs items-center justify-center rounded-xl border-2 border-charcoal/80 bg-transparent font-heading text-xl tracking-wide text-charcoal transition-colors hover:bg-charcoal hover:text-paper"
+          >
+            Voltar para início
+          </Link>
+        </div>
+      </Shell>
+    );
+  }
+
+  const since24h = new Date(Date.now() - 86400000).toISOString();
+  const head = { count: "exact" as const, head: true };
+
+  const [
+    usersRes,
+    campaignsRes,
+    championsRes,
+    matchesRes,
+    feedbackRes,
+    bugRes,
+    sharesRes,
+    events24hRes,
+  ] = await Promise.all([
+    supabase.from("public_profiles").select("id", head),
+    supabase.from("campaign_runs").select("id", head),
+    supabase.from("campaign_runs").select("id", head).eq("status", "champion"),
+    supabase.from("matches").select("id", head),
+    supabase.from("feedback_reports").select("id", head),
+    supabase.from("feedback_reports").select("id", head).eq("type", "bug"),
+    supabase.from("campaign_runs").select("id", head).eq("is_public", true),
+    supabase.from("game_events").select("id", head).gte("created_at", since24h),
+  ]);
+
+  const usersCount = usersRes.count ?? 0;
+  const campaignsCount = campaignsRes.count ?? 0;
+  const championsCount = championsRes.count ?? 0;
+  const matchesCount = matchesRes.count ?? 0;
+  const feedbackCount = feedbackRes.count ?? 0;
+  const bugCount = bugRes.count ?? 0;
+  const sharesCount = sharesRes.count ?? 0;
+  const events24hCount = events24hRes.count ?? 0;
+
+  const [
+    { data: feedbacks },
+    { data: recentEvents },
+    { data: eventNames },
+    { data: campaigns },
+    { data: ranking },
+  ] = await Promise.all([
+    supabase
+      .from("feedback_reports")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(50)
+      .returns<FeedbackRow[]>(),
+    supabase
+      .from("game_events")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100)
+      .returns<GameEventRow[]>(),
+    supabase
+      .from("game_events")
+      .select("event_name")
+      .order("created_at", { ascending: false })
+      .limit(1000)
+      .returns<{ event_name: string }[]>(),
+    supabase
+      .from("campaign_runs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(50)
+      .returns<CampaignRun[]>(),
+    supabase
+      .from("ranking_entries")
+      .select("*")
+      .returns<RankingEntry[]>(),
+  ]);
+
+  // Nomes (sem e-mail) via public_profiles
+  const userIds = new Set<string>();
+  for (const f of feedbacks ?? []) if (f.user_id) userIds.add(f.user_id);
+  for (const r of ranking ?? []) userIds.add(r.user_id);
+  const profileById = new Map<string, PublicProfile>();
+  if (userIds.size > 0) {
+    const { data: profiles } = await supabase
+      .from("public_profiles")
+      .select("id, username, display_name")
+      .in("id", [...userIds])
+      .returns<PublicProfile[]>();
+    for (const p of profiles ?? []) profileById.set(p.id, p);
+  }
+  const nameOf = (id: string | null) => {
+    if (!id) return "Anônimo";
+    const p = profileById.get(id);
+    return p?.display_name?.trim() || p?.username?.trim() || "Jogador";
+  };
+
+  // Agrupamento de eventos por tipo
+  const eventCounts = new Map<string, number>();
+  for (const e of eventNames ?? []) {
+    eventCounts.set(e.event_name, (eventCounts.get(e.event_name) ?? 0) + 1);
+  }
+  const groupedEvents = [...eventCounts.entries()].sort((a, b) => b[1] - a[1]);
+
+  // Top 10 ranking
+  const topRanking = [...(ranking ?? [])]
+    .sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      const gdA = a.goals_for - a.goals_against;
+      const gdB = b.goals_for - b.goals_against;
+      if (gdB !== gdA) return gdB - gdA;
+      return b.goals_for - a.goals_for;
+    })
+    .slice(0, 10);
+
+  const summary = [
+    { label: "Usuários", value: usersCount },
+    { label: "Campanhas", value: campaignsCount },
+    { label: "Campeãs", value: championsCount },
+    { label: "Partidas", value: matchesCount },
+    { label: "Feedbacks", value: feedbackCount },
+    { label: "Bugs", value: bugCount },
+    { label: "Shares", value: sharesCount },
+    { label: "Eventos 24h", value: events24hCount },
+  ];
+
+  return (
+    <Shell>
+      <header className="flex items-center justify-between">
+        <div>
+          <span className="font-heading text-3xl leading-none tracking-tight text-charcoal">
+            LEN<span className="text-field">DAS</span>
+          </span>
+          <h1 className="font-heading text-4xl leading-none tracking-tight text-charcoal">
+            Admin
+          </h1>
+        </div>
+        <Link
+          href="/"
+          className="font-sans text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground hover:text-charcoal"
+        >
+          Início
+        </Link>
+      </header>
+
+      {/* Resumo */}
+      <section className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {summary.map((s) => (
+          <div
+            key={s.label}
+            className="flex flex-col items-center rounded-xl border border-charcoal/15 bg-field-dark py-3 text-paper"
+          >
+            <span className="font-heading text-3xl leading-none text-gold">
+              {s.value}
+            </span>
+            <span className="mt-1 font-sans text-[0.55rem] font-bold uppercase tracking-[0.12em] text-paper/70">
+              {s.label}
+            </span>
+          </div>
+        ))}
+      </section>
+
+      {/* Eventos por tipo */}
+      <Section title="Eventos por tipo">
+        <div className="flex flex-wrap gap-2">
+          {groupedEvents.map(([name, qty]) => (
+            <span
+              key={name}
+              className="rounded-lg border border-charcoal/10 bg-paper px-3 py-1.5 font-sans text-xs text-charcoal"
+            >
+              {name}
+              <span className="ml-2 font-heading text-base text-field">{qty}</span>
+            </span>
+          ))}
+          {groupedEvents.length === 0 && <Empty />}
+        </div>
+      </Section>
+
+      {/* Feedbacks */}
+      <Section title="Feedbacks recentes">
+        <ul className="flex flex-col gap-2">
+          {(feedbacks ?? []).map((f) => (
+            <li
+              key={f.id}
+              className="rounded-xl border border-charcoal/10 bg-paper px-3 py-2.5"
+            >
+              <div className="flex items-center justify-between">
+                <span
+                  className={`rounded px-2 py-0.5 font-sans text-[0.6rem] font-bold uppercase tracking-wide ${
+                    f.type === "bug"
+                      ? "bg-cta/15 text-cta"
+                      : f.type === "idea"
+                        ? "bg-gold/20 text-charcoal"
+                        : "bg-field/15 text-field-dark"
+                  }`}
+                >
+                  {f.type}
+                </span>
+                <span className="font-sans text-[0.65rem] text-muted-foreground">
+                  {nameOf(f.user_id)} · {fmt(f.created_at)}
+                </span>
+              </div>
+              <p className="mt-1.5 font-sans text-sm text-charcoal">{f.message}</p>
+              {f.page_url && (
+                <p className="mt-1 font-sans text-[0.65rem] text-muted-foreground">
+                  {f.page_url}
+                </p>
+              )}
+            </li>
+          ))}
+          {(feedbacks ?? []).length === 0 && <Empty />}
+        </ul>
+      </Section>
+
+      {/* Campanhas */}
+      <Section title="Campanhas recentes">
+        <div className="overflow-hidden rounded-xl border border-charcoal/10 bg-paper">
+          <div className="grid grid-cols-[1fr_3.5rem_2.5rem_2.5rem] gap-2 border-b border-charcoal/10 px-3 py-2 font-sans text-[0.55rem] font-bold uppercase tracking-wide text-muted-foreground">
+            <span>Status · Fase</span>
+            <span className="text-center">GP-GS</span>
+            <span className="text-center">Rk</span>
+            <span className="text-center">Pub</span>
+          </div>
+          {(campaigns ?? []).map((c) => (
+            <div
+              key={c.id}
+              className="grid grid-cols-[1fr_3.5rem_2.5rem_2.5rem] items-center gap-2 border-b border-charcoal/5 px-3 py-2 font-sans text-xs text-charcoal"
+            >
+              <span className="truncate">
+                <StatusTag status={c.status} /> · {stageLabel(c.current_stage)}
+              </span>
+              <span className="text-center">
+                {c.goals_for}-{c.goals_against}
+              </span>
+              <span className="text-center">{c.ranking_applied ? "✓" : "—"}</span>
+              <span className="text-center">{c.is_public ? "✓" : "—"}</span>
+            </div>
+          ))}
+          {(campaigns ?? []).length === 0 && <Empty />}
+        </div>
+      </Section>
+
+      {/* Top 10 ranking */}
+      <Section title="Top 10 ranking">
+        <div className="overflow-hidden rounded-xl border border-charcoal/10 bg-paper">
+          <div className="grid grid-cols-[1.4rem_1fr_2rem_2rem_2.5rem] gap-2 border-b border-charcoal/10 px-3 py-2 font-sans text-[0.55rem] font-bold uppercase tracking-wide text-muted-foreground">
+            <span>#</span>
+            <span>Jogador</span>
+            <span className="text-center">V</span>
+            <span className="text-center">Tít</span>
+            <span className="text-center">OVR</span>
+          </div>
+          {topRanking.map((r, i) => (
+            <div
+              key={r.id}
+              className="grid grid-cols-[1.4rem_1fr_2rem_2rem_2.5rem] items-center gap-2 border-b border-charcoal/5 px-3 py-2 font-sans text-sm text-charcoal"
+            >
+              <span className="text-muted-foreground">{i + 1}</span>
+              <span className="truncate font-semibold">{nameOf(r.user_id)}</span>
+              <span className="text-center font-heading text-base">{r.wins}</span>
+              <span className="text-center">{r.championships}</span>
+              <span className="text-center">{r.best_overall}</span>
+            </div>
+          ))}
+          {topRanking.length === 0 && <Empty />}
+        </div>
+      </Section>
+
+      {/* Eventos recentes */}
+      <Section title="Eventos recentes">
+        <ul className="flex flex-col gap-1.5">
+          {(recentEvents ?? []).map((e) => (
+            <li
+              key={e.id}
+              className="flex items-center gap-2 rounded-lg border border-charcoal/10 bg-paper px-3 py-1.5"
+            >
+              <span className="shrink-0 rounded bg-charcoal/10 px-1.5 py-0.5 font-sans text-[0.6rem] font-bold text-charcoal">
+                {e.event_name}
+              </span>
+              <span className="min-w-0 flex-1 truncate font-sans text-[0.65rem] text-muted-foreground">
+                {e.page_url ?? ""}{" "}
+                {Object.keys(e.event_data ?? {}).length > 0 &&
+                  JSON.stringify(e.event_data).slice(0, 50)}
+              </span>
+              <span className="shrink-0 font-sans text-[0.6rem] text-muted-foreground">
+                {fmt(e.created_at)}
+              </span>
+            </li>
+          ))}
+          {(recentEvents ?? []).length === 0 && <Empty />}
+        </ul>
+      </Section>
+    </Shell>
+  );
+}
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mt-8">
+      <h2 className="mb-3 font-heading text-2xl tracking-wide text-charcoal">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function StatusTag({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    active: "text-field-dark",
+    champion: "text-gold",
+    eliminated: "text-cta",
+    completed: "text-charcoal",
+  };
+  return <span className={`font-semibold ${map[status] ?? ""}`}>{status}</span>;
+}
+
+function Empty() {
+  return (
+    <p className="px-3 py-4 text-center font-sans text-sm text-muted-foreground">
+      Nada por aqui ainda.
+    </p>
+  );
+}
